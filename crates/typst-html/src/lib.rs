@@ -9,7 +9,7 @@ use typst_library::diag::{bail, warning, At, SourceResult};
 use typst_library::engine::{Engine, Route, Sink, Traced};
 use typst_library::foundations::{Content, StyleChain, Target, TargetElem};
 use typst_library::html::{
-    attr, tag, FrameElem, HtmlDocument, HtmlElem, HtmlElement, HtmlNode,
+    attr, tag, FrameElem, HtmlDocument, HtmlElem, HtmlElement, HtmlFrame, HtmlNode,
 };
 use typst_library::introspection::{
     Introspector, Locator, LocatorLink, SplitLocator, TagElem,
@@ -180,9 +180,6 @@ fn handle(
         if let Some(body) = elem.body(styles) {
             children = html_fragment(engine, body, locator.next(&elem.span()), styles)?;
         }
-        if tag::is_void(elem.tag) && !children.is_empty() {
-            bail!(elem.span(), "HTML void elements may not have children");
-        }
         let element = HtmlElement {
             tag: elem.tag,
             attrs: elem.attrs(styles).clone(),
@@ -249,7 +246,10 @@ fn handle(
             styles.chain(&style),
             Region::new(Size::splat(Abs::inf()), Axes::splat(false)),
         )?;
-        output.push(HtmlNode::Frame(frame));
+        output.push(HtmlNode::Frame(HtmlFrame {
+            inner: frame,
+            text_size: TextElem::size_in(styles),
+        }));
     } else {
         engine.sink.warn(warning!(
             child.span(),
